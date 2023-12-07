@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+  <Name value="SevenDaysToDiscord" />
+  <DisplayName value="7 Days To Discord" />
+  <Description value="Notification service for game events in discord" />
+  <Author value="NotOats" />
+  <Version value="1.0.0" />
+  <Website value="" />
+</xml>
