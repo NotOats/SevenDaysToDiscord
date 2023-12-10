@@ -1,8 +1,17 @@
-﻿namespace SevenDaysToDiscord
+﻿using SevenDaysToDiscord.Hosting;
+using SevenDaysToDiscord.Modules;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace SevenDaysToDiscord
 {
     internal class EntryPoint : IModApi
     {
-        private BloodMoonNotifier _notifier;
+        private Host _host;
 
         public void InitMod(Mod _modInstance)
         {
@@ -16,7 +25,13 @@
 
             var webhookClient = new WebhookClient(settings.DiscordWebHook);
 
-            _notifier = new BloodMoonNotifier(settings, webhookClient);
+            // Initialize modules & host
+            var modules = new List<IModule>
+            {
+                new BloodMoonNotifier(settings, webhookClient)
+            };
+
+            _host = new Host(modules);
 
             ModEvents.GameStartDone.RegisterHandler(GameStartDone);
             ModEvents.GameShutdown.RegisterHandler(GameShutdown);
@@ -24,12 +39,12 @@
 
         private void GameStartDone()
         {
-            _notifier.Start();
+            _host?.Start();
         }
 
         private void GameShutdown()
         {
-            _notifier.Stop();
+            _host?.Stop();
         }
     }
 }

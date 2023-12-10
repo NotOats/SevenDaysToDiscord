@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using SevenDaysToDiscord.Hosting;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SevenDaysToDiscord
+namespace SevenDaysToDiscord.Modules
 {
-    internal class BloodMoonNotifier
+    internal class BloodMoonNotifier : BackgroundModule
     {
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-
         private readonly ModSettings _settings;
         private readonly WebhookClient _webhookClient;
 
@@ -27,29 +23,18 @@ namespace SevenDaysToDiscord
             _noticeDays = (float)(_settings.BloodMoonNotificationSeconds / 60) / GameApi.DayNightLength;
         }
 
-        public void Start()
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             var interval = TimeSpan.FromSeconds(_settings.BloodMoonCheckDelaySeconds);
-            var token = _cts.Token;
-
-            Task.Run(async () =>
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    await CheckForBloodMoon();
-
-                    await Task.Delay(interval, token);
-                }
-            }, token);
 
             Log.Out($"SevenDaysToDiscord: Started BM Notifier  ({interval.TotalSeconds}s interval, {_noticeDays} days notice)");
-        }
 
-        public void Stop()
-        {
-            Log.Out("SevenDaysToDiscord: Stopping BM Task");
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await CheckForBloodMoon();
 
-            _cts.Cancel();
+                await Task.Delay(interval, cancellationToken);
+            }
         }
 
         private async Task CheckForBloodMoon()
