@@ -1,18 +1,26 @@
-﻿using System;
+﻿using SevenDaysToDiscord.Settings;
+using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace SevenDaysToDiscord
 {
+    internal class DiscordSettings
+    {
+        public static string SectionName = "Discord";
+
+        public string WebHookUrl { get; set; }
+    }
+
     internal class WebhookClient
     {
         private readonly string _webhookUrl;
         private readonly HttpClient _httpClient = new HttpClient();
 
-        public WebhookClient(string webhookUrl)
+        public WebhookClient(ISettings<DiscordSettings> settings)
         {
-            _webhookUrl = webhookUrl ?? throw new ArgumentNullException(nameof(webhookUrl));
+            _webhookUrl = settings.Value?.WebHookUrl ?? throw new ArgumentNullException(nameof(settings));
         }
 
         public async Task<bool> SendMessage(string escapedJson)

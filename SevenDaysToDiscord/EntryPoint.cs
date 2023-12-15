@@ -1,50 +1,39 @@
 ﻿using SevenDaysToDiscord.Hosting;
 using SevenDaysToDiscord.Modules;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ExceptionServices;
-using System.Threading;
-using System.Threading.Tasks;
+using SevenDaysToDiscord.Settings;
+using SimpleInjector;
+using System.IO;
 
 namespace SevenDaysToDiscord
 {
     internal class EntryPoint : IModApi
     {
+        private readonly Container _container = new Container();
         private Host _host;
 
         public void InitMod(Mod _modInstance)
         {
-            // TODO: Load settings file
-            var settings = new ModSettings
+            _container.Options.DefaultLifestyle = Lifestyle.Singleton;
+            
+            _container.Register<ISettingsReader>(() =>
             {
-                //BloodMoonCheckDelaySeconds = 10,
-                //BloodMoonNotificationSeconds = 23400, // 6.5hrs before (default BM cycle = every 7 hours)
-                DiscordWebHook = @"https://discord.com/api/webhooks/1181558860725637181/6W7W2-Jh3EHIprpxpPT2KS595L89BdHmZeGXH68wLVQHadiiw6dE8AcFQW-3R7huuG7y"
-            };
+                var file = Path.Combine(_modInstance.Path, "appsettings.json");
+                return new JsonSettingsReader(file);
+            });
 
-            var webhookClient = new WebhookClient(settings.DiscordWebHook);
+            _container.RegisterSettings<BloodMoonNotifierSettings>(BloodMoonNotifierSettings.SectionName);
+            _container.RegisterSettings<DiscordSettings>(DiscordSettings.SectionName);
 
-            // Initialize modules & host
-            var modules = new List<IModule>
-            {
-                new BloodMoonNotifier(settings, webhookClient)
-            };
+            _container.Register<WebhookClient>();
+            _container.Collection.Register<IModule>(typeof(BloodMoonNotifier));
 
-            _host = new Host(modules);
+            _container.Register<Host>();
+            _container.Verify();
 
-            ModEvents.GameStartDone.RegisterHandler(GameStartDone);
-            ModEvents.GameShutdown.RegisterHandler(GameShutdown);
-        }
+            _host = _container.GetInstance<Host>();
 
-        private void GameStartDone()
-        {
-            _host?.Start();
-        }
-
-        private void GameShutdown()
-        {
-            _host?.Stop();
+            ModEvents.GameStartDone.RegisterHandler(() => _host?.Start());
+            ModEvents.GameShutdown.RegisterHandler(() => _host?.Stop());
         }
     }
 }

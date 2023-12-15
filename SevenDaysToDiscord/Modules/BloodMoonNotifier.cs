@@ -1,13 +1,23 @@
 ﻿using SevenDaysToDiscord.Hosting;
+using SevenDaysToDiscord.Settings;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace SevenDaysToDiscord.Modules
 {
+    internal class BloodMoonNotifierSettings
+    {
+        public static string SectionName = "BloodMoonNotifier";
+
+        public uint BloodMoonCheckDelaySeconds { get; set; } = 30;
+
+        public uint BloodMoonNotificationSeconds { get; set; } = 3600; // Default to 1 hours before BM
+    }
+
     internal class BloodMoonNotifier : BackgroundModule
     {
-        private readonly ModSettings _settings;
+        private readonly ISettings<BloodMoonNotifierSettings> _settings;
         private readonly WebhookClient _webhookClient;
 
         private readonly float _noticeDays;
@@ -15,17 +25,17 @@ namespace SevenDaysToDiscord.Modules
         private float _lastNoticeTime = 0;
         private int _lastNoticeBloodMoonDay = 0;
 
-        public BloodMoonNotifier(ModSettings settings, WebhookClient webhookClient)
+        public BloodMoonNotifier(ISettings<BloodMoonNotifierSettings> settings, WebhookClient webhookClient)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _webhookClient = webhookClient ?? throw new ArgumentNullException(nameof(webhookClient));
 
-            _noticeDays = (float)(_settings.BloodMoonNotificationSeconds / 60) / GameApi.DayNightLength;
+            _noticeDays = (float)(_settings.Value.BloodMoonNotificationSeconds / 60) / GameApi.DayNightLength;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var interval = TimeSpan.FromSeconds(_settings.BloodMoonCheckDelaySeconds);
+            var interval = TimeSpan.FromSeconds(_settings.Value.BloodMoonCheckDelaySeconds);
 
             Log.Out($"SevenDaysToDiscord: Started BM Notifier  ({interval.TotalSeconds}s interval, {_noticeDays} days notice)");
 

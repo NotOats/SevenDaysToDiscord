@@ -539,3 +539,6 @@ FodyWeavers.xsd
 
 # Game Assemblies
 dependencies/
+
+# Settings
+appsettings.json
