@@ -59,6 +59,7 @@
     <Compile Include="GameApi.cs" />
     <Compile Include="Hosting\BackgroundModule.cs" />
     <Compile Include="Hosting\Host.cs" />
+    <Compile Include="Modules\ServerInfo.cs" />
     <Compile Include="Settings\ContainerExtensions.cs" />
     <Compile Include="Settings\ISettings.cs" />
     <Compile Include="Settings\ISettingsReader.cs" />

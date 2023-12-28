@@ -6,26 +6,31 @@ using System.Threading.Tasks;
 
 namespace SevenDaysToDiscord.Modules
 {
-    internal class BloodMoonNotifierSettings
+    internal class BloodMoonNotifierSettings : IDiscordSettings
     {
         public static string SectionName = "BloodMoonNotifier";
+
+        public bool Enabled { get; set; } = false;
 
         public uint BloodMoonCheckDelaySeconds { get; set; } = 30;
 
         public uint BloodMoonNotificationSeconds { get; set; } = 3600; // Default to 1 hours before BM
+
+        public string WebHookUrl { get; set; }
+        public ulong ThreadId { get; set; } = 0;
     }
 
     internal class BloodMoonNotifier : BackgroundModule
     {
         private readonly ISettings<BloodMoonNotifierSettings> _settings;
-        private readonly WebhookClient _webhookClient;
+        private readonly WebhookClient<BloodMoonNotifierSettings> _webhookClient;
 
         private readonly float _noticeDays;
 
         private float _lastNoticeTime = 0;
         private int _lastNoticeBloodMoonDay = 0;
 
-        public BloodMoonNotifier(ISettings<BloodMoonNotifierSettings> settings, WebhookClient webhookClient)
+        public BloodMoonNotifier(ISettings<BloodMoonNotifierSettings> settings, WebhookClient<BloodMoonNotifierSettings> webhookClient)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _webhookClient = webhookClient ?? throw new ArgumentNullException(nameof(webhookClient));
@@ -37,11 +42,12 @@ namespace SevenDaysToDiscord.Modules
         {
             var interval = TimeSpan.FromSeconds(_settings.Value.BloodMoonCheckDelaySeconds);
 
-            Log.Out($"SevenDaysToDiscord: Started BM Notifier  ({interval.TotalSeconds}s interval, {_noticeDays} days notice)");
+            Log.Out($"SevenDaysToDiscord: Blood Moon Notifier ({interval.TotalSeconds}s interval, {_noticeDays} days notice) - {(_settings.Value.Enabled ? "Enabled" : "Disabled")}");
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                await CheckForBloodMoon();
+                if (_settings.Value.Enabled)
+                    await CheckForBloodMoon();
 
                 await Task.Delay(interval, cancellationToken);
             }
@@ -65,15 +71,6 @@ namespace SevenDaysToDiscord.Modules
                 _lastNoticeBloodMoonDay = 0;
             }
 
-#if DEBUG
-            Log.Out($"SevenDaysToDiscord: Worldtime {GameManager.Instance.World.GetWorldTime()}");
-            Log.Out($"SevenDaysToDiscord: bloodMoonDay {bloodMoonDay}");
-            Log.Out($"SevenDaysToDiscord: daysUntilBloodMoon {daysUntilBloodMoon}");
-            Log.Out($"SevenDaysToDiscord: worldTimeDays {worldTimeDays}");
-            Log.Out($"SevenDaysToDiscord: _lastNoticeTime {_lastNoticeTime}");
-            Log.Out($"SevenDaysToDiscord: _lastNoticeBloodMoonDay {_lastNoticeBloodMoonDay}");
-#endif
-
             if (_noticeDays < daysUntilBloodMoon)
                 return;
 
@@ -81,7 +78,7 @@ namespace SevenDaysToDiscord.Modules
                 return;
 
             var message = CreateDiscordNotification(daysUntilBloodMoon, bloodMoonDay);
-            if (!await _webhookClient.SendMessage(message))
+            if (await _webhookClient.SendMessage(message) == null)
             {
                 Log.Error("SevenDaysToDiscord: Failed to send blood moon notification to discord");
                 return;
@@ -97,12 +94,7 @@ namespace SevenDaysToDiscord.Modules
             var offset = new DateTimeOffset(DateTime.Now + realTimeUntilBloodMoon);
             var timestamp = offset.ToUnixTimeSeconds();
 
-            var message = $"{{ \"content\": \"Next Blood Moon (Day {bloodMoonDay}) in {realTimeUntilBloodMoon.TotalMinutes} minutes! <t:{timestamp}:F> <t:{timestamp}:R> \" }}";
-
-#if DEBUG
-            Log.Out($"SevenDaysToDiscord: message: {message}");
-#endif
-            return message;
+            return $"{{ \"content\": \"Next Blood Moon (Day {bloodMoonDay}) <t:{timestamp}:R>\" }}";
         }
     }
 }

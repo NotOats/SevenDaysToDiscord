@@ -22,10 +22,12 @@ namespace SevenDaysToDiscord
             });
 
             _container.RegisterSettings<BloodMoonNotifierSettings>(BloodMoonNotifierSettings.SectionName);
-            _container.RegisterSettings<DiscordSettings>(DiscordSettings.SectionName);
+            _container.RegisterSettings<ServerInfoSettings>(ServerInfoSettings.SectionName);
 
-            _container.Register<WebhookClient>();
-            _container.Collection.Register<IModule>(typeof(BloodMoonNotifier));
+            _container.Register(typeof(WebhookClient<>));
+            _container.Collection.Register<IModule>(
+                typeof(BloodMoonNotifier), 
+                typeof(ServerInfo));
 
             _container.Register<Host>();
             _container.Verify();
